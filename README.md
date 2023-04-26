@@ -12,7 +12,7 @@
 Using [Composer][composer]:
 
 ```
-composer require friendsofcake/process-mq:dev-master
+composer require friendsofcake/process-mq
 ```
 
 You then need to load the plugin. You can use the shell command:

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace ProcessMQ\Connection;
 
 use AMQPChannel;
@@ -6,6 +8,7 @@ use AMQPConnection;
 use AMQPExchange;
 use AMQPQueue;
 use Cake\Database\Log\QueryLogger;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 
 /**
@@ -14,13 +17,12 @@ use RuntimeException;
  */
 class RabbitMQConnection
 {
-
     /**
      * Configuration options
      *
      * @var array
      */
-    public $_config = [
+    public mixed $config = [
         'user' => 'guest',
         'password' => 'guest',
         'host' => 'localhost',
@@ -33,52 +35,52 @@ class RabbitMQConnection
     /**
      * Connection object
      *
-     * @var AMQPConnection
+     * @var \AMQPConnection
      */
-    protected $_connection;
+    protected AMQPConnection $connection;
 
     /**
      * List of queues
      *
      * @var array
      */
-    protected $_queues = [];
+    protected array $queues = [];
 
     /**
      * List of exchanges
      *
      * @var array
      */
-    protected $_exchanges = [];
+    protected array $exchanges = [];
 
     /**
      * List of channels
      *
      * @var array
      */
-    protected $_channels = [];
+    protected array $channels = [];
 
     /**
      * Logger instance
      *
      * @var mixed
      */
-    protected $_logger;
+    protected mixed $logger;
 
     /**
      * Whether or not to log queries.
      *
      * @var bool
      */
-    protected $_logQueries;
+    protected bool $logQueries;
 
     /**
      * Initializes connection to RabbitMQ
      */
     public function __construct($config = [])
     {
-        $this->_config = $config + $this->_config;
-        $this->_connection = new AMQPConnection();
+        $this->config = $config + $this->config;
+        $this->connection = new AMQPConnection();
         $this->connect();
     }
 
@@ -87,9 +89,9 @@ class RabbitMQConnection
      *
      * @return array
      */
-    public function config()
+    public function config(): array
     {
-        return $this->_config;
+        return $this->config;
     }
 
     /**
@@ -97,70 +99,72 @@ class RabbitMQConnection
      *
      * @return string
      */
-    public function configName()
+    public function configName(): string
     {
-        if (empty($this->_config['name'])) {
+        if (empty($this->config['name'])) {
             return '';
         }
 
-        return $this->_config['name'];
+        return $this->config['name'];
     }
 
     /**
      * Enables or disables query logging for this connection.
      *
-     * @param bool $enable whether to turn logging on or disable it.
+     * @param bool|null $enable whether to turn logging on or disable it.
      *   Use null to read current value.
-     * @return bool
+     * @return bool|null
      */
-    public function logQueries($enable = null)
+    public function logQueries(bool $enable = null): ?bool
     {
         if ($enable !== null) {
-            $this->_logQueries = $enable;
+            $this->logQueries = $enable;
         }
 
-        if ($this->_logQueries) {
-            return $this->_logQueries;
+        if ($this->logQueries) {
+            return $this->logQueries;
         }
 
-        return $this->_logQueries = $enable;
+        return $this->logQueries = $enable;
     }
 
     /**
      * Sets the logger object instance. When called with no arguments
      * it returns the currently setup logger instance.
      *
-     * @param object $logger logger object instance
-     * @return object logger instance
+     * @param \Psr\Log\LoggerInterface|null $logger logger object instance
+     * @return \Psr\Log\LoggerInterface logger instance
      */
-    public function logger($logger = null)
+    public function logger(LoggerInterface $logger = null): LoggerInterface
     {
         if ($logger) {
-            $this->_logger = $logger;
+            $this->logger = $logger;
         }
 
-        if ($this->_logger) {
-            return $this->_logger;
+        if ($this->logger) {
+            return $this->logger;
         }
 
-        $this->_logger = new QueryLogger();
-        return $this->_logger;
+        $this->logger = new QueryLogger();
+
+        return $this->logger;
     }
 
     /**
      * Connects to RabbitMQ
      *
      * @return void
+     * @throws \AMQPConnectionException
      */
-    public function connect()
+    public function connect(): void
     {
-        $connection = $this->_connection;
-        $connection->setLogin($this->_config['user']);
-        $connection->setPassword($this->_config['password']);
-        $connection->setHost($this->_config['host']);
-        $connection->setPort($this->_config['port']);
-        $connection->setVhost($this->_config['vhost']);
-        $connection->setReadTimeout($this->_config['readTimeout']);
+        $connection = $this->connection;
+        $connection->setLogin($this->config['user']);
+        $connection->setPassword($this->config['password']);
+        $connection->setHost($this->config['host']);
+        $connection->setPort($this->config['port']);
+        $connection->setVhost($this->config['vhost']);
+        $connection->setReadTimeout($this->config['readTimeout']);
 
         # You shall not use persistent connections
         #
@@ -175,29 +179,31 @@ class RabbitMQConnection
     /**
      * Returns the internal connection object
      *
-     * @return AMQPConnection
+     * @return \AMQPConnection
      */
-    public function connection()
+    public function connection(): AMQPConnection
     {
-        return $this->_connection;
+        return $this->connection;
     }
 
     /**
      * Creates a new channel to communicate with an exchange or queue object
      *
+     * @param string $name
      * @param array $options
-     * @return AMQPChannel
+     * @return \AMQPChannel
+     * @throws \AMQPConnectionException
      */
-    public function channel($name, $options = [])
+    public function channel(string $name, array $options = []): AMQPChannel
     {
-        if (empty($this->_channels[$name])) {
-            $this->_channels[$name] = new AMQPChannel($this->connection());
+        if (empty($this->channels[$name])) {
+            $this->channels[$name] = new AMQPChannel($this->connection());
             if (!empty($options['prefetchCount'])) {
-                $this->_channels[$name]->setPrefetchCount((int)$options['prefetchCount']);
+                $this->channels[$name]->setPrefetchCount((int)$options['prefetchCount']);
             }
         }
 
-        return $this->_channels[$name];
+        return $this->channels[$name];
     }
 
     /**
@@ -206,11 +212,13 @@ class RabbitMQConnection
      *
      * @param string $name
      * @param array $options
-     * @return AMQPExchange
+     * @return \AMQPExchange
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
      */
-    public function exchange($name, $options = [])
+    public function exchange(string $name, array $options = []): AMQPExchange
     {
-        if (empty($this->_exchanges[$name])) {
+        if (empty($this->exchanges[$name])) {
             $channel = $this->channel($name, $options);
             $exchange = new AMQPExchange($channel);
             $exchange->setName($name);
@@ -223,10 +231,10 @@ class RabbitMQConnection
                 $exchange->setFlags($options['flags']);
             }
 
-            $this->_exchanges[$name] = $exchange;
+            $this->exchanges[$name] = $exchange;
         }
 
-        return $this->_exchanges[$name];
+        return $this->exchanges[$name];
     }
 
     /**
@@ -235,11 +243,13 @@ class RabbitMQConnection
      *
      * @param string $name
      * @param array $options
-     * @return AMQPQueue
+     * @return \AMQPQueue
+     * @throws \AMQPConnectionException
+     * @throws \AMQPQueueException
      */
-    public function queue($name, $options = [])
+    public function queue(string $name, array $options = []): AMQPQueue
     {
-        if (empty($this->_queues[$name])) {
+        if (empty($this->queues[$name])) {
             $channel = $this->channel($name, $options);
             $queue = new AMQPQueue($channel);
             $queue->setName($name);
@@ -248,10 +258,10 @@ class RabbitMQConnection
                 $queue->setFlags($options['flags']);
             }
 
-            $this->_queues[$name] = $queue;
+            $this->queues[$name] = $queue;
         }
 
-        return $this->_queues[$name];
+        return $this->queues[$name];
     }
 
     /**
@@ -263,10 +273,18 @@ class RabbitMQConnection
      * @param mixed $data
      * @param array $options
      * @return boolean
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
      */
-    public function send($topic, $task, $data, array $options = [])
-    {
-        list($data, $attributes, $options) = $this->_prepareMessage($data, $options);
+    public function send(
+        string $topic,
+        string $task,
+        mixed $data,
+        array $options = []
+    ): bool {
+        [$data, $attributes, $options] = $this->prepareMessage($data, $options);
+
         return $this->exchange($topic)->publish($data, $task, AMQP_NOPARAM, $attributes);
     }
 
@@ -278,14 +296,20 @@ class RabbitMQConnection
      * @param array $messages
      * @param array $options
      * @return boolean
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
      */
-    public function sendBatch($topic, $task, array $messages, array $options = [])
-    {
-        return array_walk($messages, function ($data) use ($topic, $task, $options) {
+    public function sendBatch(
+        string $topic,
+        string $task,
+        array $messages,
+        array $options = []
+    ): bool {
+        return array_walk($messages, function ($data) use ($topic, $task, $options): void {
             $this->send($topic, $task, $data, $options);
         });
     }
-
 
     /**
      * Prepare a message by serializing, optionally compressing and setting the correct content type
@@ -295,7 +319,7 @@ class RabbitMQConnection
      * @param  array $options
      * @return array
      */
-    protected function _prepareMessage($data, array $options)
+    protected function prepareMessage(mixed $data, array $options): array
     {
         $attributes = [];
 

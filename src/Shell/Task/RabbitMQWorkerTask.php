@@ -13,6 +13,7 @@ use RuntimeException;
  * Utility functions to setup a worker server
  *
  * @property \ProcessManager\Shell\Task\ProcessManagerTask ProcessManager
+ * @deprecated
  */
 class RabbitMQWorkerTask extends Shell
 {

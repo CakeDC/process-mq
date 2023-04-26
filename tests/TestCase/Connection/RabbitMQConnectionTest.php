@@ -1,21 +1,24 @@
 <?php
-namespace ProcessMQ\Test\TestCase\Connection;
+declare(strict_types=1);
 
+namespace TestCase\Connection;
+
+use Cake\TestSuite\TestCase;
 use ProcessMQ\Connection\RabbitMQConnection;
 
-class RabbitMQConnectionTest extends \PHPUnit_Framework_TestCase
+class RabbitMQConnectionTest extends TestCase
 {
     /**
      * @var \ProcessMQ\Connection\RabbitMQConnection
      */
-    public $connection;
+    public RabbitMQConnection $connection;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->connection = new RabbitMQConnection();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         unset($this->connection);
     }

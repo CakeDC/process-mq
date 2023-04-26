@@ -11,36 +11,35 @@ use Cake\Datasource\ConnectionManager;
  */
 class Queue
 {
-
     /**
      * Queue configuration read from the YAML file
      *
      * @var array
      */
-    protected static $_config = [];
+    protected static array $_config = [];
 
     /**
      * List of exchanges for publication
      *
      * @var \ProcessMQ\Connection\RabbitMQConnection[]
      */
-    protected static $_publishers = [];
+    protected static array $_publishers = [];
 
     /**
      * List of queues for consumption
      *
      * @var array
      */
-    protected static $_consumers = [];
+    protected static array $_consumers = [];
 
     /**
      * Get the queue object for consumption
      *
-     * @param  string $name
+     * @param string $name
      * @return \AMQPQueue
      * @throws \Exception on missing consumer configuration.
      */
-    public static function consume($name)
+    public static function consume(string $name): \AMQPQueue
     {
         $config = static::get($name);
         if (empty($config['consume'])) {
@@ -54,6 +53,7 @@ class Queue
         ];
 
         if (!array_key_exists($name, static::$_consumers)) {
+            /** @var \ProcessMQ\Connection\RabbitMQConnection $connection */
             $connection = ConnectionManager::get($config['connection']);
             static::$_consumers[$name] = $connection->queue($config['queue'], $config);
         }
@@ -64,12 +64,15 @@ class Queue
     /**
      * Publish a message to a RabbitMQ exchange
      *
-     * @param  string $name
-     * @param  mixed  $data
-     * @param  array  $options
+     * @param string $name
+     * @param mixed $data
+     * @param array $options
      * @return boolean
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
      */
-    public static function publish($name, $data, array $options = [])
+    public static function publish(string $name, mixed $data, array $options = []): bool
     {
         $config = static::get($name);
         if (empty($config['publish'])) {
@@ -93,22 +96,23 @@ class Queue
     /**
      * Test if a queue is configured
      *
-     * @param  string $name
+     * @param string $name
      * @return boolean
      */
-    public static function configured($name)
+    public static function configured(string $name): bool
     {
-        static::_load();
+        static::load();
+
         return array_key_exists($name, static::$_config);
     }
 
     /**
      * Get the queue configuration
      *
-     * @param  string $name
+     * @param string $name
      * @return array
      */
-    public static function get($name)
+    public static function get(string $name): array
     {
         if (!static::configured($name)) {
             throw new Exception([$name]);
@@ -122,7 +126,7 @@ class Queue
      *
      * @return void
      */
-    public static function clear()
+    public static function clear(): void
     {
         static::$_config = [];
         static::$_publishers = [];
@@ -134,7 +138,7 @@ class Queue
      *
      * @return void
      */
-    protected static function _load()
+    protected static function load(): void
     {
         if (!empty(static::$_config)) {
             return;
@@ -147,6 +151,5 @@ class Queue
      */
     protected function __construct()
     {
-
     }
 }
