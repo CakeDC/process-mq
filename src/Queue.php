@@ -2,8 +2,8 @@
 namespace ProcessMQ;
 
 use Cake\Core\Configure;
-use Cake\Core\Exception\Exception;
 use Cake\Datasource\ConnectionManager;
+use Exception;
 
 /**
  * Queue utility class making working with RabbitMQ a lot easier
@@ -111,11 +111,12 @@ class Queue
      *
      * @param string $name
      * @return array
+     * @throws \Exception
      */
     public static function get(string $name): array
     {
         if (!static::configured($name)) {
-            throw new Exception([$name]);
+            throw new Exception($name);
         }
 
         return static::$_config[$name];
